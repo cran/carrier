@@ -1,7 +1,9 @@
-context("crate")
-
 test_that("crate() supports lambda syntax", {
-  expect_equal(crate(~NULL), new_crate(as_function(~NULL)))
+  expect_equal(
+    crate(~NULL),
+    new_crate(as_function(~NULL, env = current_env())),
+    ignore_function_env = TRUE
+  )
 })
 
 test_that("crate() requires functions", {
@@ -15,29 +17,29 @@ test_that("crate() supports quasiquotation", {
   expect_identical(body(fn), quote(toupper("foo")))
   expect_identical(fn(), "FOO")
 
-  fn <- crate(~toupper(!!foo))
+  fn <- crate(~ toupper(!!foo))
   expect_identical(body(fn), quote(toupper("foo")))
   expect_identical(fn(), "FOO")
 })
 
 test_that("can supply data", {
-  fn <- crate(~toupper(foo), foo = "foo")
+  fn <- crate(~ toupper(foo), foo = "foo")
   expect_identical(fn(), "FOO")
 
   foo <- "foo"
-  fn <- crate(~toupper(foo), foo = foo)
+  fn <- crate(~ toupper(foo), foo = foo)
   expect_identical(fn(), "FOO")
 })
 
 test_that("can supply data before or after function", {
   foo <- "foo"
-  fn <- crate(foo = foo, ~toupper(foo))
+  fn <- crate(foo = foo, ~ toupper(foo))
   expect_identical(fn(), "FOO")
 })
 
 test_that("fails if relevant data not supplied", {
   foobar <- "foobar"
-  fn <- crate(foo = "foo", ~toupper(foobar))
+  fn <- crate(foo = "foo", ~ toupper(foobar))
   expect_error(fn(), "not found")
 })
 
@@ -45,17 +47,17 @@ test_that("can supply data in a block", {
   fn <- crate({
     foo <- "foo"
     bar <- "bar"
-    ~paste(foo, bar)
+    ~ paste(foo, bar)
   })
 
   expect_data(fn, "foo", "bar")
 })
 
 test_that("crated function roundtrips under serialisation", {
-  fn <- crate(~toupper(foo), foo = "foo")
+  fn <- crate(~ toupper(foo), foo = "foo")
   out <- unserialize(serialize(fn, NULL))
-  expect_equal(fn_env(fn), fn_env(out))
-  expect_identical(fn(), out())
+  expect_equal(as.list(fn_env(fn)), as.list(fn_env(out)))
+  expect_equal(fn(), out())
 })
 
 test_that("new_crate() requires functions", {
@@ -64,7 +66,7 @@ test_that("new_crate() requires functions", {
 })
 
 test_that("new_crate() crates", {
-  expect_is(new_crate(function() NULL), "crate")
+  expect_s3_class(new_crate(function() NULL), "crate")
 })
 
 test_that("sizes are printed with the crate", {
@@ -76,9 +78,9 @@ test_that("sizes are printed with the crate", {
   attributes(bare_fn) <- NULL
   environment(bare_fn) <- global_env()
 
-  bare_size <- format(pryr::object_size(bare_fn))
-  bar_size <- format(pryr::object_size(bar))
-  foo_size <- format(pryr::object_size(foo))
+  bare_size <- format_bytes(lobstr::obj_size(bare_fn))
+  bar_size <- format_bytes(lobstr::obj_size(bar))
+  foo_size <- format_bytes(lobstr::obj_size(foo))
 
   output <- "
 * function: %s
@@ -96,7 +98,7 @@ test_that("empty crates are printed correctly", {
   attributes(bare_fn) <- NULL
   environment(bare_fn) <- global_env()
 
-  bare_size <- format(pryr::object_size(bare_fn))
+  bare_size <- format_bytes(lobstr::obj_size(bare_fn))
 
   output <- "
 * function: %s
@@ -110,5 +112,5 @@ test_that("function must be defined in the crate environment", {
   fn <- function() NULL
   expect_error(crate(fn), "must be defined inside")
 
-  expect_is(crate(set_env(fn)), "crate")
+  expect_s3_class(crate(set_env(fn)), "crate")
 })

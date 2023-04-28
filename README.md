@@ -1,5 +1,8 @@
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
+<!-- badges: start -->
+
+[![R-CMD-check](https://github.com/r-lib/carrier/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/r-lib/carrier/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
 
 # carrier
 
@@ -12,6 +15,9 @@ Currently, carrier only provides a strict function constructor that
 forces you to be explicit about the functions and the data your function
 depends on. In the future it will also provide tools to figure it out
 automatically.
+
+See also the [bundle](https://rstudio.github.io/bundle/) package for the
+tidymodels ecosystem.
 
 ## Creating explicit crated functions
 
@@ -73,7 +79,7 @@ na_rm <- TRUE
 
 fn <- crate(function(x) stats::var(x, na.rm = na_rm))
 fn(1:10)
-#> Error in stats::var(x, na.rm = na_rm): object 'na_rm' not found
+#> Error in fn(1:10): object 'na_rm' not found
 ```
 
 There are two techniques for packaging data into your crate: passing
@@ -119,9 +125,9 @@ crate(function(x) stats::var(x, na.rm = !!na_rm))
 
 However, be careful not to unquote large objects because:
 
-  - The sizes of unquoted objects are not detailed when you print the
+-   The sizes of unquoted objects are not detailed when you print the
     crate.
-  - Inlined data can cause noisy output.
+-   Inlined data can cause noisy output.
 
 Let’s unquote a data frame to see the noise caused by inlining:
 
@@ -168,3 +174,10 @@ fn(disp ~ drat)
 #> (Intercept)         drat  
 #>       952.3       -207.8
 ```
+
+## Code of Conduct
+
+Please note that the carrier project is released with a [Contributor
+Code of
+Conduct](https://contributor-covenant.org/version/2/1/CODE_OF_CONDUCT.html).
+By contributing to this project, you agree to abide by its terms.

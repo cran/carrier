@@ -1,3 +1,10 @@
+# carrier 0.1.1
+
+* Crated functions no longer carry source references (#6).
+
+* Fixed issue that prevented crate sizes to be printed in
+  human-readable format (r-lib/lobstr#60).
+
 
 # carrier 0.1.0
 

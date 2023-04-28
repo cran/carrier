@@ -44,18 +44,18 @@ NULL
 #' crate(function(x) stats::var(x))
 #'
 #' # Or the formula notation:
-#' crate(~stats::var(.x))
+#' crate(~ stats::var(.x))
 #'
 #' # Declare data by supplying named arguments. You can test you have
 #' # declared all necessary data by calling your crated function:
 #' na_rm <- TRUE
-#' fn <- crate(~stats::var(.x, na.rm = na_rm))
+#' fn <- crate(~ stats::var(.x, na.rm = na_rm))
 #' try(fn(1:10))
 #'
 #' # For small data it is handy to unquote instead. Unquoting inlines
 #' # objects inside the function. This is less verbose if your
 #' # function depends on many small objects:
-#' fn <- crate(~stats::var(.x, na.rm = !!na_rm))
+#' fn <- crate(~ stats::var(.x, na.rm = !!na_rm))
 #' fn(1:10)
 #'
 #' # One downside is that the individual sizes of unquoted objects
@@ -97,6 +97,9 @@ crate <- function(.fn, ...) {
     abort("The function must be defined inside the `crate()` call")
   }
 
+  # Remove potentially heavy srcrefs (#6)
+  fn <- zap_srcref(fn)
+
   new_crate(fn)
 }
 
@@ -123,7 +126,7 @@ crate_sizes <- function(crate) {
   bare_fn <- unclass(crate)
   environment(bare_fn) <- global_env()
 
-  bare_size <- pryr::object_size(bare_fn)
+  bare_size <- lobstr::obj_size(bare_fn)
 
   env <- fn_env(crate)
   nms <- ls(env)
@@ -133,7 +136,7 @@ crate_sizes <- function(crate) {
   out[[1]] <- bare_size
 
   index <- seq2(2, n)
-  get_size <- function(nm) pryr::object_size(env[[nm]])
+  get_size <- function(nm) lobstr::obj_size(env[[nm]])
   out[index] <- lapply(nms, get_size)
 
   # Sort data by decreasing size but keep function first
@@ -148,16 +151,16 @@ crate_sizes <- function(crate) {
 print.crate <- function(x, ...) {
   sizes <- crate_sizes(x)
 
-  total_size <- format(pryr::object_size(x), ...)
+  total_size <- format_bytes(lobstr::obj_size(x), ...)
   cat(sprintf("<crate> %s\n", total_size))
 
-  fn_size <- format(sizes[[1]], ...)
+  fn_size <- format_bytes(sizes[[1]], ...)
   cat(sprintf("* function: %s\n", fn_size))
 
   nms <- names(sizes)
   for (i in seq2_along(2, sizes)) {
     nm <- nms[[i]]
-    size <- format(sizes[[i]], ...)
+    size <- format_bytes(sizes[[i]], ...)
     cat(sprintf("* `%s`: %s\n", nm, size))
   }
 
@@ -169,17 +172,6 @@ print.crate <- function(x, ...) {
   invisible(x)
 }
 
-# From pryr
-format.bytes <- function(x, digits = 3, ...) {
-  power <- min(floor(log(abs(x), 1000)), 4)
-  if (power < 1) {
-    unit <- "B"
-  } else {
-    unit <- c("kB", "MB", "GB", "TB")[[power]]
-    x <- x / (1000 ^ power)
-  }
-
-  x <- signif(x, digits = digits)
-  fmt <- format(unclass(x), big.mark = ",", scientific = FALSE)
-  paste(fmt, unit)
+format_bytes <- function(x) {
+  format(as_bytes(unclass(x)))
 }
