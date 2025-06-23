@@ -4,7 +4,13 @@
 \alias{crate}
 \title{Crate a function to share with another process}
 \usage{
-crate(.fn, ...)
+crate(
+  .fn,
+  ...,
+  .parent_env = baseenv(),
+  .error_arg = ".fn",
+  .error_call = environment()
+)
 }
 \arguments{
 \item{.fn}{A fresh formula or function. "Fresh" here means that
@@ -13,9 +19,22 @@ you need to crate a function that is already defined. Formulas
 are converted to purrr-like lambda functions using
 \code{\link[rlang:as_function]{rlang::as_function()}}.}
 
-\item{...}{Arguments to declare in the environment of \code{.fn}. If a
-name is supplied, the object is assigned to that name. Otherwise
-the argument is automatically named after itself.}
+\item{...}{Named arguments to declare in the environment of \code{.fn}.}
+
+\item{.parent_env}{The default of \code{baseenv()} ensures that the evaluation
+environment of the crate is isolated from the search path. Specifying
+another environment such as the global environment allows this condition to
+be relaxed (but at the expense of no longer being able to rely on a local
+run giving the same results as one in a different process).}
+
+\item{.error_arg}{An argument name as a string. This argument
+will be mentioned in error messages as the input that is at the
+origin of a problem.}
+
+\item{.error_call}{The execution environment of a currently
+running function, e.g. \code{caller_env()}. The function will be
+mentioned in error messages as the source of the error. See the
+\code{call} argument of \code{\link[rlang:abort]{abort()}} for more information.}
 }
 \description{
 \code{crate()} creates functions in a self-contained environment

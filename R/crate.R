@@ -34,9 +34,13 @@ NULL
 #'   you need to crate a function that is already defined. Formulas
 #'   are converted to purrr-like lambda functions using
 #'   [rlang::as_function()].
-#' @param ... Arguments to declare in the environment of `.fn`. If a
-#'   name is supplied, the object is assigned to that name. Otherwise
-#'   the argument is automatically named after itself.
+#' @param ... Named arguments to declare in the environment of `.fn`.
+#' @param .parent_env The default of `baseenv()` ensures that the evaluation
+#'   environment of the crate is isolated from the search path. Specifying
+#'   another environment such as the global environment allows this condition to
+#'   be relaxed (but at the expense of no longer being able to rely on a local
+#'   run giving the same results as one in a different process).
+#' @inheritParams rlang::args_error_context
 #'
 #' @export
 #' @examples
@@ -73,28 +77,44 @@ NULL
 #' # explicitly set its environment to the crate environment with the
 #' # set_env() function from rlang:
 #' crate(rlang::set_env(fn))
-crate <- function(.fn, ...) {
+crate <- function(
+  .fn,
+  ...,
+  .parent_env = baseenv(),
+  .error_arg = ".fn",
+  .error_call = environment()
+) {
   # Evaluate arguments in a child of the caller so the caller context
   # is in scope and new data is created in a separate child
   env <- child_env(caller_env())
   dots <- exprs(...)
+  if (!all(nzchar(names2(dots)))) {
+    abort("All `...` arguments must be named")
+  }
   locally(!!!dots, .env = env)
 
   # Quote and evaluate in the local env to avoid capturing execution
   # envs when user passed an unevaluated function or formula
   fn <- eval_bare(enexpr(.fn), env)
 
-  # Isolate the evaluation environment from the search path
-  env_poke_parent(env, base_env())
+  # Isolate the evaluation environment from the search path if
+  # .parent_env = baseenv()
+  env_poke_parent(env, .parent_env)
 
   if (is_formula(fn)) {
     fn <- as_function(fn)
   } else if (!is_function(fn)) {
-    abort("`.fn` must evaluate to a function")
+    abort(
+      sprintf("`%s` must evaluate to a function", .error_arg),
+      call = .error_call
+    )
   }
 
   if (!is_reference(get_env(fn), env)) {
-    abort("The function must be defined inside the `crate()` call")
+    abort(
+      "The function must be defined inside this call",
+      call = .error_call
+    )
   }
 
   # Remove potentially heavy srcrefs (#6)
